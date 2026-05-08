@@ -1,6 +1,6 @@
 {
   "name": "homebridge-qingping-air-monitor2-km81",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Qingping Air Monitor 2 (cgllc.airm.cgs2) 전용 Homebridge 플러그인. Homebridge 2.0 호환.",
   "main": "index.js",
   "engines": {

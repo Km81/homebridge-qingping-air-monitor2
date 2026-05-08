@@ -13,7 +13,7 @@ let Service, Characteristic, Accessory, Homebridge;
 
 const PLUGIN_NAME = 'homebridge-qingping-air-monitor2-km81';
 const PLATFORM_NAME = 'QingpingAirMonitor2';
-const PLUGIN_VERSION = '1.2.1';
+const PLUGIN_VERSION = '1.2.2';
 
 // 기본값
 const DEFAULT_POLLING_INTERVAL_SEC = 30;
@@ -99,7 +99,8 @@ class QingpingPlatform {
       return;
     }
 
-    const usedAccessories = new Set();
+    // 이번 런에서 살아있어야 할 액세서리 집합 (캐시 재사용이든 새 등록이든)
+    const accessoriesInUse = new Set();
 
     for (const deviceConfig of devices) {
       if (!deviceConfig) continue;
@@ -110,21 +111,27 @@ class QingpingPlatform {
 
       const uuid = this.api.hap.uuid.generate(deviceConfig.token + deviceConfig.ip + PLATFORM_NAME);
       const cached = this.accessories.find(a => a.UUID === uuid);
-      if (cached) usedAccessories.add(cached);
 
+      let device;
       try {
-        new QingpingAccessory(this.log, deviceConfig, this.api, cached, this);
+        device = new QingpingAccessory(this.log, deviceConfig, this.api, cached, this);
       } catch (err) {
         this.log.error(`장치 초기화 실패 (${deviceConfig.name || deviceConfig.ip}): ${err.message}`);
+        continue;
+      }
+
+      // 캐시 재사용했든 새로 등록했든, device.accessory 가 살아있어야 할 액세서리
+      if (device && device.accessory) {
+        accessoriesInUse.add(device.accessory);
       }
     }
 
-    // 설정에서 빠진 캐시 액세서리는 정리
-    const orphans = this.accessories.filter(a => !usedAccessories.has(a));
+    // 이번 런에서 사용되지 않는 캐시 액세서리만 정리
+    const orphans = this.accessories.filter(a => !accessoriesInUse.has(a));
     if (orphans.length > 0) {
       this.log.info(`사용되지 않는 캐시 액세서리 ${orphans.length}개 제거`);
       this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, orphans);
-      this.accessories = this.accessories.filter(a => usedAccessories.has(a));
+      this.accessories = this.accessories.filter(a => accessoriesInUse.has(a));
     }
   }
 }
@@ -255,12 +262,12 @@ class QingpingAccessory {
   initAccessory() {
     if (this.cachedAccessory) {
       this.accessory = this.cachedAccessory;
-      this.log.debug(`캐시 액세서리 재사용: ${this.name}`);
+      this.log.info(`[${this.name}] 캐시된 액세서리 재사용 (UUID=${this.UUID.substring(0, 8)}…)`);
     } else {
       this.accessory = new Accessory(this.name, this.UUID, Homebridge.hap.Categories.SENSOR);
       this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [this.accessory]);
       if (this.platform) this.platform.accessories.push(this.accessory);
-      this.log.info(`새 액세서리 등록: ${this.name}`);
+      this.log.info(`[${this.name}] 새 액세서리 등록 (UUID=${this.UUID.substring(0, 8)}…)`);
     }
 
     // accessory.context 초기화 (Homebridge가 자동으로 캐시 파일에 저장)
