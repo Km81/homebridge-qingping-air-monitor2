@@ -15,8 +15,8 @@
           "type": "object",
           "properties": {
             "name": {
-              "title": "이름",
-              "description": "HomeKit에 표시될 액세서리 이름입니다.",
+              "title": "이름 (메인 액세서리)",
+              "description": "HomeKit 메인 액세서리에 표시될 이름입니다. 예: 거실 공기측정기",
               "type": "string",
               "default": "Qingping Air Monitor 2",
               "minLength": 1,
@@ -80,18 +80,69 @@
               "required": false
             },
 
-            "pm25Breakpoints": {
-              "title": "공기질 등급 PM2.5 경계값 (μg/m³)",
-              "description": "PM2.5 농도로 공기질 등급을 5단계(매우 좋음 / 좋음 / 보통 / 나쁨 / 매우 나쁨)로 구분하는 4개 경계값입니다. 작은 값부터 큰 값 순서로 입력. 기본값: [7, 15, 30, 55] (WHO 권고 기준). 한국 환경부 기준에 맞추려면 [15, 35, 75, 150] 입력.",
-              "type": "array",
-              "minItems": 4,
-              "maxItems": 4,
-              "items": {
-                "type": "integer",
-                "minimum": 0,
-                "maximum": 500
-              },
-              "default": [7, 15, 30, 55],
+            "airQualitySensorName": {
+              "title": "공기질 센서 이름",
+              "description": "HomeKit에 표시될 공기질 센서 서브 액세서리 이름. 비워두면 기본값 '공기질' 사용.",
+              "type": "string",
+              "default": "공기질",
+              "required": false
+            },
+            "temperatureSensorName": {
+              "title": "온도 센서 이름",
+              "description": "HomeKit에 표시될 온도 센서 서브 액세서리 이름. 비워두면 기본값 '온도' 사용.",
+              "type": "string",
+              "default": "온도",
+              "required": false
+            },
+            "humiditySensorName": {
+              "title": "습도 센서 이름",
+              "description": "HomeKit에 표시될 습도 센서 서브 액세서리 이름. 비워두면 기본값 '습도' 사용.",
+              "type": "string",
+              "default": "습도",
+              "required": false
+            },
+            "co2SensorName": {
+              "title": "이산화탄소 센서 이름",
+              "description": "HomeKit에 표시될 CO2 센서 서브 액세서리 이름. 비워두면 기본값 '이산화탄소' 사용.",
+              "type": "string",
+              "default": "이산화탄소",
+              "required": false
+            },
+
+            "pm25LimitExcellent": {
+              "title": "공기질 '매우 좋음' 상한 (μg/m³)",
+              "description": "PM2.5가 이 값 미만이면 '매우 좋음(EXCELLENT)'. WHO 기준 7, 한국 환경부 기준 15.",
+              "type": "integer",
+              "default": 7,
+              "minimum": 0,
+              "maximum": 500,
+              "required": false
+            },
+            "pm25LimitGood": {
+              "title": "공기질 '좋음' 상한 (μg/m³)",
+              "description": "PM2.5가 이 값 미만이면 '좋음(GOOD)'. WHO 기준 15, 한국 환경부 기준 35.",
+              "type": "integer",
+              "default": 15,
+              "minimum": 0,
+              "maximum": 500,
+              "required": false
+            },
+            "pm25LimitFair": {
+              "title": "공기질 '보통' 상한 (μg/m³)",
+              "description": "PM2.5가 이 값 미만이면 '보통(FAIR)'. WHO 기준 30, 한국 환경부 기준 75.",
+              "type": "integer",
+              "default": 30,
+              "minimum": 0,
+              "maximum": 500,
+              "required": false
+            },
+            "pm25LimitInferior": {
+              "title": "공기질 '나쁨' 상한 (μg/m³)",
+              "description": "PM2.5가 이 값 미만이면 '나쁨(INFERIOR)', 이상이면 '매우 나쁨(POOR)'. WHO 기준 55, 한국 환경부 기준 150.",
+              "type": "integer",
+              "default": 55,
+              "minimum": 0,
+              "maximum": 500,
               "required": false
             },
 

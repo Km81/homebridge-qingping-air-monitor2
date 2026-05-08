@@ -13,7 +13,7 @@ let Service, Characteristic, Accessory, Homebridge;
 
 const PLUGIN_NAME = 'homebridge-qingping-air-monitor2-km81';
 const PLATFORM_NAME = 'QingpingAirMonitor2';
-const PLUGIN_VERSION = '1.1.1';
+const PLUGIN_VERSION = '1.2.0';
 
 // 기본값
 const DEFAULT_POLLING_INTERVAL_SEC = 30;
@@ -22,13 +22,22 @@ const DEFAULT_CO2_CLEAR_THRESHOLD = 900;   // 이하면 해제(NORMAL)
 const DEFAULT_PM25_BREAKPOINTS = [7, 15, 30, 55]; // EXCELLENT/GOOD/FAIR/INFERIOR/POOR 경계값
 const LOW_BATTERY_THRESHOLD = 20;
 
+// 기본 센서 이름
+const DEFAULT_NAMES = {
+  airQuality:  '공기질',
+  temperature: '온도',
+  humidity:    '습도',
+  co2:         '이산화탄소',
+  battery:     '배터리',
+};
+
 // 서브타입 (캐시 액세서리에서 서비스 식별/제거에 사용)
 const SUBTYPES = {
-  airQuality: 'airQualityService',
+  airQuality:  'airQualityService',
   temperature: 'temperatureService',
-  humidity: 'humidityService',
-  co2: 'co2Service',
-  battery: 'batteryService',
+  humidity:    'humidityService',
+  co2:         'co2Service',
+  battery:     'batteryService',
 };
 
 module.exports = function (homebridge) {
@@ -131,19 +140,25 @@ class QingpingAccessory {
     this.deviceId = config.deviceId;
     this.pollingIntervalMs = (config.pollingInterval || DEFAULT_POLLING_INTERVAL_SEC) * 1000;
 
-    // 센서별 활성화 토글 (기본 모두 true, 명시적으로 false일 때만 비활성화)
+    // 센서별 활성화 토글
     this.enableTemperature = config.enableTemperatureSensor !== false;
     this.enableHumidity = config.enableHumiditySensor !== false;
     this.enableAirQuality = config.enableAirQualitySensor !== false;
     this.enableCo2 = config.enableCarbonDioxideSensor !== false;
 
-    // 공기질 등급 경계값
-    this.pm25Breakpoints = Array.isArray(config.pm25Breakpoints) && config.pm25Breakpoints.length === 4
-      ? [...config.pm25Breakpoints].sort((a, b) => a - b)
-      : DEFAULT_PM25_BREAKPOINTS;
+    // 센서 이름 (사용자가 config 에서 지정한 값 또는 기본값)
+    this.sensorNames = {
+      airQuality:  (config.airQualitySensorName  || '').trim() || DEFAULT_NAMES.airQuality,
+      temperature: (config.temperatureSensorName || '').trim() || DEFAULT_NAMES.temperature,
+      humidity:    (config.humiditySensorName    || '').trim() || DEFAULT_NAMES.humidity,
+      co2:         (config.co2SensorName         || '').trim() || DEFAULT_NAMES.co2,
+      battery:     DEFAULT_NAMES.battery, // 배터리 이름은 변경 옵션 제공 안 함
+    };
+
+    // 공기질 등급 경계값 - 개별 필드 우선, 없으면 legacy 배열, 그래도 없으면 기본값
+    this.pm25Breakpoints = this.resolvePm25Breakpoints(config);
 
     // CO2 히스테리시스 임계값
-    // - co2AbnormalThreshold (구버전 호환): 단일값으로 받으면 detect로 사용하고 clear는 그 90%로 자동 설정
     let co2Detect = config.co2DetectThreshold;
     let co2Clear = config.co2ClearThreshold;
     if (co2Detect === undefined && config.co2AbnormalThreshold !== undefined) {
@@ -174,7 +189,7 @@ class QingpingAccessory {
       chargingState: 2,
     };
 
-    // CO2 히스테리시스 상태 (true = 감지됨/ABNORMAL, false = 정상/NORMAL)
+    // CO2 히스테리시스 상태
     this.co2DetectedState = false;
 
     // 액세서리 준비
@@ -185,11 +200,37 @@ class QingpingAccessory {
     this.startPolling();
 
     this.log.info(`[${this.name}] 활성화된 센서: ` +
-      `${this.enableAirQuality ? '공기질 ' : ''}` +
-      `${this.enableTemperature ? '온도 ' : ''}` +
-      `${this.enableHumidity ? '습도 ' : ''}` +
-      `${this.enableCo2 ? 'CO2 ' : ''}배터리`);
+      `${this.enableAirQuality ? `${this.sensorNames.airQuality} ` : ''}` +
+      `${this.enableTemperature ? `${this.sensorNames.temperature} ` : ''}` +
+      `${this.enableHumidity ? `${this.sensorNames.humidity} ` : ''}` +
+      `${this.enableCo2 ? `${this.sensorNames.co2} ` : ''}${this.sensorNames.battery}`);
+    this.log.info(`[${this.name}] 공기질 등급 경계값(μg/m³): 매우좋음<${this.pm25Breakpoints[0]} / 좋음<${this.pm25Breakpoints[1]} / 보통<${this.pm25Breakpoints[2]} / 나쁨<${this.pm25Breakpoints[3]} / 매우나쁨≥${this.pm25Breakpoints[3]}`);
     this.log.info(`[${this.name}] CO2 히스테리시스: 감지 ≥ ${this.co2DetectThreshold}ppm, 해제 ≤ ${this.co2ClearThreshold}ppm`);
+  }
+
+  /**
+   * 신규 4개 필드 (pm25LimitExcellent/Good/Fair/Inferior) 우선,
+   * 없으면 legacy 배열 (pm25Breakpoints), 그래도 없으면 기본값.
+   * 결과는 항상 4개 정수, 오름차순 정렬.
+   */
+  resolvePm25Breakpoints(config) {
+    const fromIndividual = [
+      config.pm25LimitExcellent,
+      config.pm25LimitGood,
+      config.pm25LimitFair,
+      config.pm25LimitInferior,
+    ];
+    const allDefined = fromIndividual.every(v => Number.isFinite(Number(v)));
+    if (allDefined) {
+      const arr = fromIndividual.map(v => Number(v)).sort((a, b) => a - b);
+      return arr;
+    }
+
+    if (Array.isArray(config.pm25Breakpoints) && config.pm25Breakpoints.length === 4) {
+      return [...config.pm25Breakpoints].map(v => Number(v)).sort((a, b) => a - b);
+    }
+
+    return [...DEFAULT_PM25_BREAKPOINTS];
   }
 
   /*-------- 액세서리 초기화 --------*/
@@ -205,54 +246,65 @@ class QingpingAccessory {
       this.log.info(`새 액세서리 등록: ${this.name}`);
     }
 
+    // accessory.context 초기화 (Homebridge가 자동으로 캐시 파일에 저장)
+    if (!this.accessory.context.serviceNames) {
+      this.accessory.context.serviceNames = {};
+    }
+
     this.setupInformationService();
 
-    // 활성화된 서비스만 셋업, 비활성화된 건 캐시에서 제거
     if (this.enableAirQuality) {
       this.setupAirQualityService();
     } else {
-      this.removeServiceBySubtype(Service.AirQualitySensor, SUBTYPES.airQuality, '공기질');
+      this.removeServiceBySubtype(Service.AirQualitySensor, SUBTYPES.airQuality, this.sensorNames.airQuality);
     }
 
     if (this.enableTemperature) {
       this.setupTemperatureService();
     } else {
-      this.removeServiceBySubtype(Service.TemperatureSensor, SUBTYPES.temperature, '온도');
+      this.removeServiceBySubtype(Service.TemperatureSensor, SUBTYPES.temperature, this.sensorNames.temperature);
     }
 
     if (this.enableHumidity) {
       this.setupHumidityService();
     } else {
-      this.removeServiceBySubtype(Service.HumiditySensor, SUBTYPES.humidity, '습도');
+      this.removeServiceBySubtype(Service.HumiditySensor, SUBTYPES.humidity, this.sensorNames.humidity);
     }
 
     if (this.enableCo2) {
       this.setupCarbonDioxideService();
     } else {
-      this.removeServiceBySubtype(Service.CarbonDioxideSensor, SUBTYPES.co2, 'CO2');
+      this.removeServiceBySubtype(Service.CarbonDioxideSensor, SUBTYPES.co2, this.sensorNames.co2);
     }
 
     // 배터리는 항상 활성화
     this.setupBatteryService();
   }
 
-  /**
-   * 캐시 액세서리에 남아있는 비활성화 서비스를 제거.
-   * 사용자가 토글을 OFF로 바꿨을 때 Home 앱에서 즉시 사라지도록.
-   */
   removeServiceBySubtype(ServiceClass, subType, label) {
     const service = this.accessory.getServiceById(ServiceClass, subType);
     if (service) {
       this.accessory.removeService(service);
       this.log.info(`[${this.name}] ${label} 센서 비활성화 → 액세서리에서 제거됨`);
     }
+    // context 에서도 정리
+    if (this.accessory.context.serviceNames) {
+      delete this.accessory.context.serviceNames[subType];
+    }
   }
 
   /**
    * Helper: 서비스가 캐시에 있으면 재사용, 없으면 새로 만든다.
+   *
+   * Name / ConfiguredName 정책:
    * - Name characteristic: 매번 plugin 기본값으로 갱신 (HomeKit fallback)
-   * - ConfiguredName characteristic: 없을 때만 추가/초기값 설정
-   *   → 사용자가 Home 앱에서 변경한 이름이 보존된다
+   * - ConfiguredName characteristic:
+   *   * 첫 생성 시: config 이름으로 초기 설정
+   *   * 이후 재시작 시:
+   *     - config 이름이 이전과 동일하면 → ConfiguredName 건드리지 않음
+   *       (사용자가 Home 앱에서 변경한 이름이 보존됨)
+   *     - config 이름이 변경됐다면 → ConfiguredName 강제 갱신
+   *       (사용자가 config 에서 이름을 변경했으니 그게 우선)
    */
   getOrCreateService(ServiceClass, displayName, subType) {
     let service = this.accessory.getServiceById(ServiceClass, subType);
@@ -263,10 +315,23 @@ class QingpingAccessory {
 
     service.setCharacteristic(Characteristic.Name, displayName);
 
+    const ctx = this.accessory.context.serviceNames;
+    const lastConfigName = ctx[subType];
+    const configChanged = (lastConfigName !== undefined && lastConfigName !== displayName);
+
     if (!service.testCharacteristic(Characteristic.ConfiguredName)) {
+      // 첫 생성: ConfiguredName 추가
       service.addCharacteristic(Characteristic.ConfiguredName);
       service.setCharacteristic(Characteristic.ConfiguredName, displayName);
+    } else if (configChanged) {
+      // config에서 이름이 변경됨: 강제 갱신 (Home 앱 변경값보다 config 우선)
+      service.setCharacteristic(Characteristic.ConfiguredName, displayName);
+      this.log.info(`[${this.name}] ${subType} 이름이 config에서 변경되어 갱신: ${lastConfigName} → ${displayName}`);
     }
+    // configChanged=false 인 경우: 기존 ConfiguredName 그대로 두어 Home 앱 변경값 보존
+
+    // 현재 config 이름을 기록 (다음 부팅 시 비교용, accessory.context는 자동으로 캐시에 저장됨)
+    ctx[subType] = displayName;
 
     return service;
   }
@@ -284,7 +349,7 @@ class QingpingAccessory {
   }
 
   setupAirQualityService() {
-    this.airQualityService = this.getOrCreateService(Service.AirQualitySensor, '공기질', SUBTYPES.airQuality);
+    this.airQualityService = this.getOrCreateService(Service.AirQualitySensor, this.sensorNames.airQuality, SUBTYPES.airQuality);
 
     this.airQualityService.getCharacteristic(Characteristic.AirQuality)
       .onGet(() => this.calcAirQuality(this.lastValues.pm25));
@@ -300,19 +365,19 @@ class QingpingAccessory {
   }
 
   setupTemperatureService() {
-    this.temperatureService = this.getOrCreateService(Service.TemperatureSensor, '온도', SUBTYPES.temperature);
+    this.temperatureService = this.getOrCreateService(Service.TemperatureSensor, this.sensorNames.temperature, SUBTYPES.temperature);
     this.temperatureService.getCharacteristic(Characteristic.CurrentTemperature)
       .onGet(() => this.clamp(this.lastValues.temperature, -40, 100));
   }
 
   setupHumidityService() {
-    this.humidityService = this.getOrCreateService(Service.HumiditySensor, '습도', SUBTYPES.humidity);
+    this.humidityService = this.getOrCreateService(Service.HumiditySensor, this.sensorNames.humidity, SUBTYPES.humidity);
     this.humidityService.getCharacteristic(Characteristic.CurrentRelativeHumidity)
       .onGet(() => this.clamp(this.lastValues.humidity, 0, 100));
   }
 
   setupCarbonDioxideService() {
-    this.co2Service = this.getOrCreateService(Service.CarbonDioxideSensor, '이산화탄소', SUBTYPES.co2);
+    this.co2Service = this.getOrCreateService(Service.CarbonDioxideSensor, this.sensorNames.co2, SUBTYPES.co2);
 
     this.co2Service.getCharacteristic(Characteristic.CarbonDioxideDetected)
       .onGet(() => this.co2DetectedState
@@ -324,9 +389,8 @@ class QingpingAccessory {
   }
 
   setupBatteryService() {
-    // HAP-NodeJS 13+ (Homebridge 2.0) 에서는 Service.Battery, 그 이전엔 Service.BatteryService
     const BatteryClass = Service.Battery || Service.BatteryService;
-    this.batteryService = this.getOrCreateService(BatteryClass, '배터리', SUBTYPES.battery);
+    this.batteryService = this.getOrCreateService(BatteryClass, this.sensorNames.battery, SUBTYPES.battery);
 
     this.batteryService.getCharacteristic(Characteristic.BatteryLevel)
       .onGet(() => this.clamp(this.lastValues.batteryLevel, 0, 100));
@@ -359,23 +423,15 @@ class QingpingAccessory {
       const values = await this.monitor.readAllProperties();
       this.lastValues = { ...this.lastValues, ...values };
 
-      // CO2 히스테리시스 평가
       this.evaluateCo2Hysteresis();
-
       this.pushUpdates();
+
       this.log.debug(`[${this.name}] 폴링 OK: T=${fmtNum(values.temperature, 1)}°C, RH=${fmtNum(values.humidity, 0)}%, PM2.5=${fmtNum(values.pm25, 0)}μg/m³, CO2=${fmtNum(values.co2, 0)}ppm (감지=${this.co2DetectedState}), Bat=${fmtNum(values.batteryLevel, 0)}%`);
     } catch (err) {
       this.log.warn(`[${this.name}] 폴링 실패: ${err.message}`);
-      // 다음 폴링 때 자동 재시도. MiioProtocol이 재핸드셰이크를 처리.
     }
   }
 
-  /**
-   * CO2 히스테리시스 평가:
-   * - 정상 상태에서 ppm ≥ detectThreshold → 감지로 전환
-   * - 감지 상태에서 ppm ≤ clearThreshold → 정상으로 전환
-   * - 그 외엔 현재 상태 유지 (깜빡임 방지)
-   */
   evaluateCo2Hysteresis() {
     const ppm = this.lastValues.co2;
     if (!Number.isFinite(ppm)) return;
@@ -440,15 +496,6 @@ class QingpingAccessory {
 
   /*-------- 변환 / 보정 --------*/
 
-  /**
-   * PM2.5 농도를 HomeKit AirQuality 등급으로 변환.
-   * breakpoints = [a, b, c, d] 일 때:
-   *   pm25 < a   → EXCELLENT(1)
-   *   pm25 < b   → GOOD(2)
-   *   pm25 < c   → FAIR(3)
-   *   pm25 < d   → INFERIOR(4)
-   *   pm25 >= d  → POOR(5)
-   */
   calcAirQuality(pm25) {
     if (pm25 === undefined || pm25 === null || isNaN(pm25)) {
       return Characteristic.AirQuality.UNKNOWN;
@@ -461,11 +508,6 @@ class QingpingAccessory {
     return Characteristic.AirQuality.POOR;
   }
 
-  /**
-   * 장치의 충전 상태값을 HomeKit ChargingState 로 매핑.
-   * 장치값: 1=Charging, 2=Not charging, 3=Not chargeable
-   * HomeKit:  NOT_CHARGING=0, CHARGING=1, NOT_CHARGEABLE=2
-   */
   mapChargingState(deviceValue) {
     switch (deviceValue) {
       case 1: return Characteristic.ChargingState.CHARGING;
