@@ -1,0 +1,121 @@
+{
+  "pluginAlias": "QingpingAirMonitor2",
+  "pluginType": "platform",
+  "singular": true,
+  "headerDisplay": "Qingping Air Monitor 2 (cgllc.airm.cgs2) 전용 Homebridge 플러그인입니다.\n\n토큰과 device id는 별도의 도구(예: Xiaomi Cloud Tokens Extractor 또는 homebridge-miot)로 추출해서 입력하세요.",
+  "footerDisplay": "자세한 설명은 [README](https://github.com/Km81/homebridge-qingping-air-monitor2#설정) 를 참고하세요.",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "devices": {
+        "title": "장치 목록",
+        "type": "array",
+        "required": true,
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "title": "이름",
+              "description": "HomeKit에 표시될 액세서리 이름입니다.",
+              "type": "string",
+              "default": "Qingping Air Monitor 2",
+              "minLength": 1,
+              "required": true
+            },
+            "ip": {
+              "title": "IP 주소",
+              "description": "장치의 로컬 네트워크 IP 주소입니다.",
+              "type": "string",
+              "format": "ipv4",
+              "required": true
+            },
+            "token": {
+              "title": "장치 토큰",
+              "description": "장치의 miot 통신 토큰(32자 16진수)입니다.",
+              "type": "string",
+              "required": true
+            },
+            "deviceId": {
+              "title": "장치 ID (선택)",
+              "description": "miot 디바이스의 device id 입니다. 보통은 자동 감지되지만, 핸드셰이크가 잘 안 될 경우 수동 입력하면 도움이 됩니다.",
+              "type": "string",
+              "required": false
+            },
+            "pollingInterval": {
+              "title": "폴링 간격 (초)",
+              "description": "장치에서 센서값을 얼마나 자주 읽어올지 설정합니다. 기본값: 30초",
+              "type": "integer",
+              "default": 30,
+              "minimum": 5,
+              "maximum": 600,
+              "required": false
+            },
+
+            "enableAirQualitySensor": {
+              "title": "공기질 센서 사용",
+              "description": "PM2.5/PM10/VOC 농도 + 종합 공기질 등급을 HomeKit에 노출합니다.",
+              "type": "boolean",
+              "default": true,
+              "required": false
+            },
+            "enableTemperatureSensor": {
+              "title": "온도 센서 사용",
+              "description": "현재 온도(°C)를 HomeKit에 노출합니다.",
+              "type": "boolean",
+              "default": true,
+              "required": false
+            },
+            "enableHumiditySensor": {
+              "title": "습도 센서 사용",
+              "description": "현재 상대 습도(%)를 HomeKit에 노출합니다.",
+              "type": "boolean",
+              "default": true,
+              "required": false
+            },
+            "enableCarbonDioxideSensor": {
+              "title": "이산화탄소(CO2) 센서 사용",
+              "description": "CO2 농도(ppm) + 감지/정상 상태를 HomeKit에 노출합니다.",
+              "type": "boolean",
+              "default": true,
+              "required": false
+            },
+
+            "pm25Breakpoints": {
+              "title": "공기질 등급 PM2.5 경계값 (μg/m³)",
+              "description": "PM2.5 농도로 공기질 등급을 5단계(매우 좋음 / 좋음 / 보통 / 나쁨 / 매우 나쁨)로 구분하는 4개 경계값입니다. 작은 값부터 큰 값 순서로 입력. 기본값: [7, 15, 30, 55] (WHO 권고 기준). 한국 환경부 기준에 맞추려면 [15, 35, 75, 150] 입력.",
+              "type": "array",
+              "minItems": 4,
+              "maxItems": 4,
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 500
+              },
+              "default": [7, 15, 30, 55],
+              "required": false
+            },
+
+            "co2DetectThreshold": {
+              "title": "CO2 감지 임계값 (ppm)",
+              "description": "현재 CO2 농도가 이 값 이상이면 HomeKit이 'CO2 비정상' 상태로 전환합니다. 기본값: 1000ppm (실내공기질 권장 한도).",
+              "type": "integer",
+              "default": 1000,
+              "minimum": 400,
+              "maximum": 5000,
+              "required": false
+            },
+            "co2ClearThreshold": {
+              "title": "CO2 해제 임계값 (ppm)",
+              "description": "감지 상태에서 CO2 농도가 이 값 이하로 내려가면 '정상' 상태로 복귀합니다. 감지 임계값 부근에서 깜빡임을 막기 위한 히스테리시스 값입니다. 반드시 감지 임계값보다 낮아야 합니다. 기본값: 900ppm.",
+              "type": "integer",
+              "default": 900,
+              "minimum": 400,
+              "maximum": 5000,
+              "required": false
+            }
+          }
+        }
+      }
+    }
+  }
+}

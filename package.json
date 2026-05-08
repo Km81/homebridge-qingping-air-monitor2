@@ -1,0 +1,35 @@
+{
+  "name": "homebridge-qingping-air-monitor2",
+  "version": "1.1.0",
+  "description": "Qingping Air Monitor 2 (cgllc.airm.cgs2) 전용 Homebridge 플러그인. Homebridge 2.0 호환.",
+  "main": "index.js",
+  "engines": {
+    "node": ">=18.15.0",
+    "homebridge": ">=2.0.0"
+  },
+  "keywords": [
+    "homebridge-plugin",
+    "qingping",
+    "air-monitor",
+    "air-quality",
+    "cgllc",
+    "cgs2",
+    "miot",
+    "xiaomi",
+    "homekit",
+    "pm25",
+    "co2",
+    "tvoc"
+  ],
+  "author": "Km81",
+  "license": "MIT",
+  "dependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Km81/homebridge-qingping-air-monitor2.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Km81/homebridge-qingping-air-monitor2/issues"
+  },
+  "homepage": "https://github.com/Km81/homebridge-qingping-air-monitor2#readme"
+}
