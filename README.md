@@ -1,9 +1,9 @@
 <span align="center">
 
-# homebridge-qingping-air-monitor2
+# homebridge-qingping-air-monitor2-km81
 
-[![npm](https://badgen.net/npm/v/homebridge-qingping-air-monitor2?icon=npm)](https://www.npmjs.com/package/homebridge-qingping-air-monitor2)
-[![mit-license](https://badgen.net/badge/license/MIT/blue)](https://github.com/Km81/homebridge-qingping-air-monitor2/blob/master/LICENSE)
+[![npm](https://badgen.net/npm/v/homebridge-qingping-air-monitor2-km81?icon=npm)](https://www.npmjs.com/package/homebridge-qingping-air-monitor2-km81)
+[![mit-license](https://badgen.net/badge/license/MIT/blue)](https://github.com/Km81/homebridge-qingping-air-monitor2-km81/blob/main/LICENSE)
 
 </span>
 
@@ -25,10 +25,10 @@
 
 ## 설치
 
-Homebridge UI에서 플러그인 검색으로 `homebridge-qingping-air-monitor2`를 찾아 설치하거나, 터미널에서:
+Homebridge UI에서 플러그인 검색으로 `homebridge-qingping-air-monitor2-km81`를 찾아 설치하거나, 터미널에서:
 
 ```sh
-sudo npm install -g homebridge-qingping-air-monitor2
+sudo npm install -g homebridge-qingping-air-monitor2-km81
 ```
 
 > **요구 환경**: Node.js 18.15+, Homebridge 2.0+

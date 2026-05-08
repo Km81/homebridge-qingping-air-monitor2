@@ -1,5 +1,5 @@
 /**
- * homebridge-qingping-air-monitor2
+ * homebridge-qingping-air-monitor2-km81
  *
  * Qingping Air Monitor 2 (cgllc.airm.cgs2) 전용 Homebridge 플러그인.
  * Homebridge 2.0 호환, 캐시 액세서리 + ConfiguredName 보존 패턴 적용.
@@ -11,7 +11,7 @@ const QingpingMonitor = require('./lib/QingpingMonitor.js');
 
 let Service, Characteristic, Accessory, Homebridge;
 
-const PLUGIN_NAME = 'homebridge-qingping-air-monitor2';
+const PLUGIN_NAME = 'homebridge-qingping-air-monitor2-km81';
 const PLATFORM_NAME = 'QingpingAirMonitor2';
 const PLUGIN_VERSION = '1.1.0';
 

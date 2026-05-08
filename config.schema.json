@@ -3,7 +3,7 @@
   "pluginType": "platform",
   "singular": true,
   "headerDisplay": "Qingping Air Monitor 2 (cgllc.airm.cgs2) 전용 Homebridge 플러그인입니다.\n\n토큰과 device id는 별도의 도구(예: Xiaomi Cloud Tokens Extractor 또는 homebridge-miot)로 추출해서 입력하세요.",
-  "footerDisplay": "자세한 설명은 [README](https://github.com/Km81/homebridge-qingping-air-monitor2#설정) 를 참고하세요.",
+  "footerDisplay": "자세한 설명은 [README](https://github.com/Km81/homebridge-qingping-air-monitor2-km81#설정) 를 참고하세요.",
   "schema": {
     "type": "object",
     "properties": {

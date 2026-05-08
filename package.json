@@ -1,5 +1,5 @@
 {
-  "name": "homebridge-qingping-air-monitor2",
+  "name": "homebridge-qingping-air-monitor2-km81",
   "version": "1.1.0",
   "description": "Qingping Air Monitor 2 (cgllc.airm.cgs2) 전용 Homebridge 플러그인. Homebridge 2.0 호환.",
   "main": "index.js",
@@ -26,10 +26,10 @@
   "dependencies": {},
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Km81/homebridge-qingping-air-monitor2.git"
+    "url": "git+https://github.com/Km81/homebridge-qingping-air-monitor2-km81.git"
   },
   "bugs": {
-    "url": "https://github.com/Km81/homebridge-qingping-air-monitor2/issues"
+    "url": "https://github.com/Km81/homebridge-qingping-air-monitor2-km81/issues"
   },
-  "homepage": "https://github.com/Km81/homebridge-qingping-air-monitor2#readme"
+  "homepage": "https://github.com/Km81/homebridge-qingping-air-monitor2-km81#readme"
 }
