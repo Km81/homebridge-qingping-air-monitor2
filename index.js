@@ -13,7 +13,7 @@ let Service, Characteristic, Accessory, Homebridge;
 
 const PLUGIN_NAME = 'homebridge-qingping-air-monitor2-km81';
 const PLATFORM_NAME = 'QingpingAirMonitor2';
-const PLUGIN_VERSION = '1.1.0';
+const PLUGIN_VERSION = '1.1.1';
 
 // 기본값
 const DEFAULT_POLLING_INTERVAL_SEC = 30;
@@ -38,6 +38,14 @@ module.exports = function (homebridge) {
   Homebridge = homebridge;
   homebridge.registerPlatform(PLUGIN_NAME, PLATFORM_NAME, QingpingPlatform);
 };
+
+/** 안전한 숫자 포매터: 숫자가 아니면 '?' 를 돌려준다 (로그용). */
+function fmtNum(v, digits = 0) {
+  if (typeof v === 'number' && Number.isFinite(v)) {
+    return v.toFixed(digits);
+  }
+  return '?';
+}
 
 
 /*============================================================================
@@ -355,7 +363,7 @@ class QingpingAccessory {
       this.evaluateCo2Hysteresis();
 
       this.pushUpdates();
-      this.log.debug(`[${this.name}] 폴링 OK: T=${values.temperature?.toFixed(1)}°C, RH=${values.humidity?.toFixed(0)}%, PM2.5=${values.pm25?.toFixed(0)}μg/m³, CO2=${values.co2?.toFixed(0)}ppm (감지=${this.co2DetectedState}), Bat=${values.batteryLevel}%`);
+      this.log.debug(`[${this.name}] 폴링 OK: T=${fmtNum(values.temperature, 1)}°C, RH=${fmtNum(values.humidity, 0)}%, PM2.5=${fmtNum(values.pm25, 0)}μg/m³, CO2=${fmtNum(values.co2, 0)}ppm (감지=${this.co2DetectedState}), Bat=${fmtNum(values.batteryLevel, 0)}%`);
     } catch (err) {
       this.log.warn(`[${this.name}] 폴링 실패: ${err.message}`);
       // 다음 폴링 때 자동 재시도. MiioProtocol이 재핸드셰이크를 처리.
@@ -370,14 +378,14 @@ class QingpingAccessory {
    */
   evaluateCo2Hysteresis() {
     const ppm = this.lastValues.co2;
-    if (ppm === undefined || ppm === null || isNaN(ppm)) return;
+    if (!Number.isFinite(ppm)) return;
 
     if (!this.co2DetectedState && ppm >= this.co2DetectThreshold) {
       this.co2DetectedState = true;
-      this.log.info(`[${this.name}] CO2 감지: ${ppm.toFixed(0)}ppm ≥ ${this.co2DetectThreshold}ppm`);
+      this.log.info(`[${this.name}] CO2 감지: ${fmtNum(ppm, 0)}ppm ≥ ${this.co2DetectThreshold}ppm`);
     } else if (this.co2DetectedState && ppm <= this.co2ClearThreshold) {
       this.co2DetectedState = false;
-      this.log.info(`[${this.name}] CO2 해제: ${ppm.toFixed(0)}ppm ≤ ${this.co2ClearThreshold}ppm`);
+      this.log.info(`[${this.name}] CO2 해제: ${fmtNum(ppm, 0)}ppm ≤ ${this.co2ClearThreshold}ppm`);
     }
   }
 
