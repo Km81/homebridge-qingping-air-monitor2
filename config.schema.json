@@ -43,11 +43,9 @@
             },
             "pollingInterval": {
               "title": "폴링 간격 (초)",
-              "description": "장치에서 센서값을 얼마나 자주 읽어올지 설정합니다. 기본값: 30초",
+              "description": "장치에서 센서값을 얼마나 자주 읽어올지 설정합니다. 권장: 5~600초. 기본값: 30초",
               "type": "integer",
               "default": 30,
-              "minimum": 5,
-              "maximum": 600,
               "required": false
             },
 
@@ -111,57 +109,45 @@
 
             "pm25LimitExcellent": {
               "title": "공기질 '매우 좋음' 상한 (μg/m³)",
-              "description": "PM2.5가 이 값 미만이면 '매우 좋음(EXCELLENT)'. WHO 기준 7, 한국 환경부 기준 15.",
+              "description": "PM2.5가 이 값 미만이면 '매우 좋음(EXCELLENT)'. WHO 기준 7, 한국 환경부 기준 15. 권장 범위 0~500.",
               "type": "integer",
               "default": 7,
-              "minimum": 0,
-              "maximum": 500,
               "required": false
             },
             "pm25LimitGood": {
               "title": "공기질 '좋음' 상한 (μg/m³)",
-              "description": "PM2.5가 이 값 미만이면 '좋음(GOOD)'. WHO 기준 15, 한국 환경부 기준 35.",
+              "description": "PM2.5가 이 값 미만이면 '좋음(GOOD)'. WHO 기준 15, 한국 환경부 기준 35. 권장 범위 0~500.",
               "type": "integer",
               "default": 15,
-              "minimum": 0,
-              "maximum": 500,
               "required": false
             },
             "pm25LimitFair": {
               "title": "공기질 '보통' 상한 (μg/m³)",
-              "description": "PM2.5가 이 값 미만이면 '보통(FAIR)'. WHO 기준 30, 한국 환경부 기준 75.",
+              "description": "PM2.5가 이 값 미만이면 '보통(FAIR)'. WHO 기준 30, 한국 환경부 기준 75. 권장 범위 0~500.",
               "type": "integer",
               "default": 30,
-              "minimum": 0,
-              "maximum": 500,
               "required": false
             },
             "pm25LimitInferior": {
               "title": "공기질 '나쁨' 상한 (μg/m³)",
-              "description": "PM2.5가 이 값 미만이면 '나쁨(INFERIOR)', 이상이면 '매우 나쁨(POOR)'. WHO 기준 55, 한국 환경부 기준 150.",
+              "description": "PM2.5가 이 값 미만이면 '나쁨(INFERIOR)', 이상이면 '매우 나쁨(POOR)'. WHO 기준 55, 한국 환경부 기준 150. 권장 범위 0~500.",
               "type": "integer",
               "default": 55,
-              "minimum": 0,
-              "maximum": 500,
               "required": false
             },
 
             "co2DetectThreshold": {
               "title": "CO2 감지 임계값 (ppm)",
-              "description": "현재 CO2 농도가 이 값 이상이면 HomeKit이 'CO2 비정상' 상태로 전환합니다. 기본값: 1000ppm (실내공기질 권장 한도).",
+              "description": "현재 CO2 농도가 이 값 이상이면 HomeKit이 'CO2 비정상' 상태로 전환합니다. 권장 범위 400~5000. 기본값: 1000ppm (실내공기질 권장 한도).",
               "type": "integer",
               "default": 1000,
-              "minimum": 400,
-              "maximum": 5000,
               "required": false
             },
             "co2ClearThreshold": {
               "title": "CO2 해제 임계값 (ppm)",
-              "description": "감지 상태에서 CO2 농도가 이 값 이하로 내려가면 '정상' 상태로 복귀합니다. 감지 임계값 부근에서 깜빡임을 막기 위한 히스테리시스 값입니다. 반드시 감지 임계값보다 낮아야 합니다. 기본값: 900ppm.",
+              "description": "감지 상태에서 CO2 농도가 이 값 이하로 내려가면 '정상' 상태로 복귀합니다. 감지 임계값 부근에서 깜빡임을 막기 위한 히스테리시스 값입니다. 반드시 감지 임계값보다 낮아야 합니다. 권장 범위 400~5000. 기본값: 900ppm.",
               "type": "integer",
               "default": 900,
-              "minimum": 400,
-              "maximum": 5000,
               "required": false
             }
           }

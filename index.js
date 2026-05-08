@@ -13,7 +13,7 @@ let Service, Characteristic, Accessory, Homebridge;
 
 const PLUGIN_NAME = 'homebridge-qingping-air-monitor2-km81';
 const PLATFORM_NAME = 'QingpingAirMonitor2';
-const PLUGIN_VERSION = '1.2.0';
+const PLUGIN_VERSION = '1.2.1';
 
 // 기본값
 const DEFAULT_POLLING_INTERVAL_SEC = 30;
@@ -54,6 +54,14 @@ function fmtNum(v, digits = 0) {
     return v.toFixed(digits);
   }
   return '?';
+}
+
+/** 숫자를 [min, max] 범위로 클램프. 유효한 숫자가 아니면 fallback 반환. */
+function clampNum(v, min, max, fallback) {
+  if (!Number.isFinite(v)) return fallback;
+  if (v < min) return min;
+  if (v > max) return max;
+  return v;
 }
 
 
@@ -138,7 +146,10 @@ class QingpingAccessory {
     this.ip = config.ip;
     this.token = config.token;
     this.deviceId = config.deviceId;
-    this.pollingIntervalMs = (config.pollingInterval || DEFAULT_POLLING_INTERVAL_SEC) * 1000;
+
+    // 폴링 간격 (5~600초로 자동 보정, 기본 30초)
+    const pollSec = clampNum(Number(config.pollingInterval), 5, 600, DEFAULT_POLLING_INTERVAL_SEC);
+    this.pollingIntervalMs = pollSec * 1000;
 
     // 센서별 활성화 토글
     this.enableTemperature = config.enableTemperatureSensor !== false;
@@ -158,15 +169,17 @@ class QingpingAccessory {
     // 공기질 등급 경계값 - 개별 필드 우선, 없으면 legacy 배열, 그래도 없으면 기본값
     this.pm25Breakpoints = this.resolvePm25Breakpoints(config);
 
-    // CO2 히스테리시스 임계값
+    // CO2 히스테리시스 임계값 (400~5000 범위로 자동 보정)
     let co2Detect = config.co2DetectThreshold;
     let co2Clear = config.co2ClearThreshold;
     if (co2Detect === undefined && config.co2AbnormalThreshold !== undefined) {
       co2Detect = config.co2AbnormalThreshold;
       this.log.info(`[${this.name}] 'co2AbnormalThreshold'는 deprecated 입니다. 'co2DetectThreshold' 와 'co2ClearThreshold' 를 사용하세요.`);
     }
-    this.co2DetectThreshold = co2Detect || DEFAULT_CO2_DETECT_THRESHOLD;
-    this.co2ClearThreshold = co2Clear !== undefined ? co2Clear : Math.round(this.co2DetectThreshold * 0.9);
+    this.co2DetectThreshold = clampNum(Number(co2Detect), 400, 5000, DEFAULT_CO2_DETECT_THRESHOLD);
+    this.co2ClearThreshold = co2Clear !== undefined
+      ? clampNum(Number(co2Clear), 400, 5000, Math.round(this.co2DetectThreshold * 0.9))
+      : Math.round(this.co2DetectThreshold * 0.9);
 
     // 검증: clear < detect 여야 함
     if (this.co2ClearThreshold >= this.co2DetectThreshold) {
@@ -222,12 +235,16 @@ class QingpingAccessory {
     ];
     const allDefined = fromIndividual.every(v => Number.isFinite(Number(v)));
     if (allDefined) {
-      const arr = fromIndividual.map(v => Number(v)).sort((a, b) => a - b);
+      const arr = fromIndividual
+        .map(v => clampNum(Number(v), 0, 500, 0))
+        .sort((a, b) => a - b);
       return arr;
     }
 
     if (Array.isArray(config.pm25Breakpoints) && config.pm25Breakpoints.length === 4) {
-      return [...config.pm25Breakpoints].map(v => Number(v)).sort((a, b) => a - b);
+      return [...config.pm25Breakpoints]
+        .map(v => clampNum(Number(v), 0, 500, 0))
+        .sort((a, b) => a - b);
     }
 
     return [...DEFAULT_PM25_BREAKPOINTS];
@@ -426,9 +443,24 @@ class QingpingAccessory {
       this.evaluateCo2Hysteresis();
       this.pushUpdates();
 
-      this.log.debug(`[${this.name}] 폴링 OK: T=${fmtNum(values.temperature, 1)}°C, RH=${fmtNum(values.humidity, 0)}%, PM2.5=${fmtNum(values.pm25, 0)}μg/m³, CO2=${fmtNum(values.co2, 0)}ppm (감지=${this.co2DetectedState}), Bat=${fmtNum(values.batteryLevel, 0)}%`);
+      const valuesLog = `T=${fmtNum(values.temperature, 1)}°C, RH=${fmtNum(values.humidity, 0)}%, PM2.5=${fmtNum(values.pm25, 0)}μg/m³, CO2=${fmtNum(values.co2, 0)}ppm, Bat=${fmtNum(values.batteryLevel, 0)}%`;
+
+      if (!this.firstPollOK) {
+        // 첫 폴링 성공 시 INFO 로그 (디버그 모드 없이도 동작 확인 가능)
+        this.firstPollOK = true;
+        this.firstPollFailLogged = false;
+        this.log.info(`[${this.name}] 첫 폴링 성공 ✓  ${valuesLog}`);
+      } else {
+        this.log.debug(`[${this.name}] 폴링 OK: ${valuesLog} (감지=${this.co2DetectedState})`);
+      }
     } catch (err) {
-      this.log.warn(`[${this.name}] 폴링 실패: ${err.message}`);
+      // 첫 실패 1회는 INFO로, 이후는 DEBUG로 (로그 도배 방지)
+      if (!this.firstPollFailLogged) {
+        this.firstPollFailLogged = true;
+        this.log.warn(`[${this.name}] 폴링 실패: ${err.message} (이후 동일 에러는 디버그 로그로만 출력됩니다)`);
+      } else {
+        this.log.debug(`[${this.name}] 폴링 실패 (반복): ${err.message}`);
+      }
     }
   }
 
